@@ -5,7 +5,7 @@ from sauronlib.find_robot import find_robot
 
 # Path to test images folder
 TEST_IMGS_FOLDER = "test_imgs"
-REFERENCE_CONTOUR = "contour_refs/uuv_contour.png"
+REFERENCE_CONTOUR = "contour_refs/auv_contour.png"
 
 if __name__ == "__main__":
     

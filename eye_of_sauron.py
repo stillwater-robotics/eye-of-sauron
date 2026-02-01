@@ -24,7 +24,7 @@ CAM_HEIGHT_METERS = 1.2192
 CAM_FOV_DEG = 120
 FOV_LENGTH_PX = (FRAME_WIDTH_PX / 2) / math.tan( math.radians(CAM_FOV_DEG) / 2 )
 
-REFERENCE_CONTOUR = "contour_refs/uuv_contour.png"
+REFERENCE_CONTOUR = "contour_refs/auv_contour.png"
 
 # ------ Global Variables ------
 swarm_members = []
