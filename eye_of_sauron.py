@@ -8,8 +8,8 @@ from dataclasses import dataclass
 
 # ------ Constants ------
 # Networking
-UDP_IP = "255.255.255.255"
-UDP_PORT = 5005
+UDP_IP = "192.168.0.101"
+UDP_PORT = 8888
 BROADCAST_RATE = 1 # 1 Hz
 
 # Camera setup
@@ -20,13 +20,17 @@ FRAME_HEIGHT_PX = 480
 CENTER_X_PX = FRAME_WIDTH_PX / 2
 CENTER_Y_PX = FRAME_HEIGHT_PX / 2
 
-CAM_HEIGHT_METERS = 1.2192
-CAM_FOV_DEG = 120
+CAM_HEIGHT_METERS = 0.7
+CAM_FOV_DEG = 80
 FOV_LENGTH_PX = (FRAME_WIDTH_PX / 2) / math.tan( math.radians(CAM_FOV_DEG) / 2 )
 
 REFERENCE_CONTOUR = "contour_refs/auv_contour.png"
 
 # ------ Global Variables ------
+DEBUG = True  # Set to True to display binary images for debugging
+prev_robot_px = None  # Track previous center for temporal smoothing
+last_reset_time = 0  # Track when 'r' was last pressed
+RESET_DURATION = 10  # Allow free movement for 10 seconds after pressing 'r'
 swarm_members = []
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -96,6 +100,8 @@ def px_to_m(u, v):
 if __name__ == "__main__":
     last_gps_tx = 0
     last_member_tx = 0
+    prev_robot_px = None
+    last_reset_time = 0
 
     cv2.namedWindow('Overhead Tracker')
     cv2.setMouseCallback('Overhead Tracker', spawn_member)
@@ -104,7 +110,7 @@ if __name__ == "__main__":
 
         # Stream from webcam
         ret, frame = capture.read()
-        frame = cv2.flip(frame, 1)
+        #frame = cv2.flip(frame, 1)
 
         # Show x,y
         cv2.circle(frame, (FRAME_WIDTH_PX // 2, FRAME_HEIGHT_PX // 2), 5, (0, 0, 255), -1)
@@ -122,10 +128,20 @@ if __name__ == "__main__":
                 last_member_tx = time.time()
                 
             # Draw arrow to physical (tracked) robot
-            if robot_px:
-                cv2.arrowedLine(frame, (member.x, member.y), robot_px, (55, 200, 0), 2)
-            
-        contours, robot_px = find_robot(frame, REFERENCE_CONTOUR)
+            if prev_robot_px:
+                cv2.arrowedLine(frame, (member.x, member.y), prev_robot_px, (55, 200, 0), 2)
+        
+        # Check if reset is still active (within 10 seconds)
+        allow_reset = (time.time() - last_reset_time) < RESET_DURATION
+        
+        contours, robot_px, binary = find_robot(frame, REFERENCE_CONTOUR, debug=DEBUG, prev_center=prev_robot_px, allow_reset=allow_reset)
+        
+        # Update previous center
+        if robot_px:
+            prev_robot_px = robot_px
+        
+        # Display binary image in debug mode, otherwise show frame with overlay
+        display_frame = frame
         if robot_px:
             robot_x_m, robot_x_y = px_to_m(robot_px[0], robot_px[1]) 
             # Mock GPS to the robot
@@ -133,14 +149,18 @@ if __name__ == "__main__":
                     msg = udp_mock_gps_position(robot_x_m, robot_x_y)
                     last_gps_tx = time.time()
 
-            cv2.circle(frame, robot_px, 14, (0, 0, 255), -1)
-            cv2.circle(frame, robot_px, 12, (0, 100, 255), -1)
-            cv2.drawContours(frame, contours, -1, (0, 165, 255), 2)
+            cv2.circle(display_frame, robot_px, 14, (0, 0, 255), -1)
+            cv2.circle(display_frame, robot_px, 12, (0, 100, 255), -1)
             
             text = f"X: {robot_x_m:.2f}m  Y: {robot_x_y:.2f}m"
-            cv2.putText(frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-            
-        cv2.imshow("Overhead Tracker", frame)
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+            cv2.putText(display_frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+        
+        cv2.imshow("Overhead Tracker", display_frame)
+        
+        # Handle key press
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
             break
+        elif key == ord('r'):
+            last_reset_time = time.time()
+            print("Reset tracking - allowing free movement for 10 seconds")
