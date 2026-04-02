@@ -14,11 +14,11 @@ unsigned int laptopPort = 0;
 bool laptopConnected = false;
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   
-  while (!Serial) {
-    delay(10);
-  }
+  // while (!Serial) {
+  //   delay(10);
+  // }
 
   Serial.print("Connecting to Wi-Fi network: ");
   Serial.println(ssid);
@@ -40,6 +40,22 @@ void setup() {
 }
 
 void loop() {
+
+  // --- Serial Command Handling ---
+    if (Serial.available() > 0) {
+        char incomingByte = Serial.read();
+        if (incomingByte == 'w') {
+            if (WiFi.status() == WL_CONNECTED) {
+                // Convert IP to string and print to Serial
+                String ip = WiFi.localIP().toString();
+                Serial.print("Pico W IP Address: ");
+                Serial.println(ip);
+            } else {
+                Serial.println("Not connected");
+            }
+        }
+    }
+
   int packetSize = udp.parsePacket();
   
   if (packetSize) {
@@ -75,4 +91,6 @@ void loop() {
       udp.endPacket();
     }
   }
+
+  delay(500);
 }

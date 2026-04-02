@@ -4,7 +4,7 @@ import csv
 import os
 from datetime import datetime
 
-PICO_IP = "192.168.0.102" 
+PICO_IP = "192.168.0.101" 
 PICO_PORT = 8888
 LOCAL_PORT = 9999 # Hold static port for the laptop
 
