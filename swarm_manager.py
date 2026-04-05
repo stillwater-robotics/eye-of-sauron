@@ -58,11 +58,11 @@ COMMAND_HELP = {
 
 # ------ Constants ------
 # Networking
-UDP_IP = "192.168.0.101"
+
 UDP_PORT = 8888
 LOCAL_PORT = 10000 
 BROADCAST_RATE = 1  # 1 Hz for Swarm
-GPS_BROADCAST_PERIOD = 2.0  # 0.5 Hz for GPS
+GPS_BROADCAST_PERIOD = 0.5  # 0.5 Hz for GPS
 
 CSV_WRITE_RATE = 10  # Hz
 CSV_PERIOD = 1.0 / CSV_WRITE_RATE
@@ -326,7 +326,7 @@ class SwarmManager:
             
             # Startup ping
             startup_msg = f"STARTUP_PORT:{self.local_port}"
-            self.sock.sendto(startup_msg.encode('utf-8'), (UDP_IP, self.target_port))
+            self.sock.sendto(startup_msg.encode('utf-8'), (self.target_ip, self.target_port))
             self.log_display(f"SYSTEM TX: {startup_msg}")
             
         except Exception as e:
@@ -474,26 +474,24 @@ class SwarmManager:
 
     def broadcast_swarm_member(self, member):
         x, y = self.px_to_m(member.x, member.y)
-        payload = f"sw_{time.time():.0f}_{x:.3f}_{y:.3f}_0_0"
+        payload = f"sw_{int(time.time())}_{x:.3f}_{y:.3f}_0_0"
         try:
-            self.sock.sendto(payload.encode(), (UDP_IP, self.target_port))
-            self.log_to_csv("TX", payload, UDP_IP)
+            self.sock.sendto(payload.encode('utf-8'), (self.swarm_select.get(), self.target_port))
+            self.log_to_csv("TX", payload, self.swarm_select.get())
             self.log_display(f"TX >> {payload}")
-            return payload
+            self.entry.delete(0, tk.END)
         except Exception as e:
-            self.log_display(f"SYSTEM ERROR: {e}")
-            return None
+            self.log_display(f"TX ERROR: {e}")
 
     def udp_mock_gps_position(self, x, y):
-        payload = f"gps_{time.time():.0f}_{x:.3f}_{y:.3f}"
+        payload = f"gps_{int(time.time())}_{x:.3f}_{y:.3f}"
         try:
-            self.sock.sendto(payload.encode(), (UDP_IP, self.target_port))
-            self.log_to_csv("TX", payload, UDP_IP)
+            self.sock.sendto(payload.encode(), (self.swarm_select.get(), self.target_port))
+            self.log_to_csv("TX", payload, self.swarm_select.get())
             self.log_display(f"TX >> {payload}")
-            return payload
+            self.entry.delete(0, tk.END)
         except Exception as e:
-            self.log_display(f"SYSTEM ERROR: {e}")
-            return None
+            self.log_display(f"TX ERROR: {e}")
 
     def px_to_m(self, u, v):
         x_px = u - CENTER_X_PX
@@ -537,7 +535,7 @@ class SwarmManager:
                 if self.prev_robot_px:
                     cv2.arrowedLine(frame, (int(member.x), int(member.y)), self.prev_robot_px, (55, 200, 0), 1, tipLength=0.2)
             
-            allow_reset = (time.time() - self.last_reset_time) < self.RESET_DURATION
+            allow_reset = (self.prev_robot_px == None)
             
             if find_robot:
                 contours, robot_px, binary = find_robot(frame, REFERENCE_CONTOUR, debug=False, prev_center=self.prev_robot_px, allow_reset=allow_reset)

@@ -102,23 +102,23 @@ def find_robot(original_img, ref_image_path="robot_reference.png", debug=False, 
         new_center = (int(center_x), int(center_y))
         
         # Apply temporal constraint if previous center exists and reset is not allowed
-        if prev_center is not None and not allow_reset:
-            max_delta = 50  # Maximum distance (in pixels) from previous center
-            dx = new_center[0] - prev_center[0]
-            dy = new_center[1] - prev_center[1]
-            distance = (dx**2 + dy**2)**0.5
+        # if prev_center is not None and not allow_reset:
+        #     max_delta = 50  # Maximum distance (in pixels) from previous center
+        #     dx = new_center[0] - prev_center[0]
+        #     dy = new_center[1] - prev_center[1]
+        #     distance = (dx**2 + dy**2)**0.5
             
-            # If new center is too far from previous, use previous center
-            if distance > max_delta:
-                new_center = prev_center
-            else:
-                # Apply smoothing: pull the new center slightly back toward the previous center
-                # 20% pull toward previous position, 80% new detection
-                smoothing_factor = 0.2
-                new_center = (
-                    int(new_center[0] * (1 - smoothing_factor) + prev_center[0] * smoothing_factor),
-                    int(new_center[1] * (1 - smoothing_factor) + prev_center[1] * smoothing_factor)
-                )
+        #     # If new center is too far from previous, use previous center
+        #     if distance > max_delta:
+        #         new_center = prev_center
+        #     else:
+        #         # Apply smoothing: pull the new center slightly back toward the previous center
+        #         # 20% pull toward previous position, 80% new detection
+        #         smoothing_factor = 0.2
+        #         new_center = (
+        #             int(new_center[0] * (1 - smoothing_factor) + prev_center[0] * smoothing_factor),
+        #             int(new_center[1] * (1 - smoothing_factor) + prev_center[1] * smoothing_factor)
+        #         )
         
         return contours, new_center, binary
 
